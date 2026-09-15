@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BUS 4040 Quiz Simulator - Weeks 1-3</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #ffffff;
+    --text: #2b2b2b;
+    --muted: #6b6b6b;
+    --accent: #3b5b92;
+    --good: #2e7d32;
+    --bad: #c62828;
+    --border: #ddd6c8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 60px;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  h1 {
+    font-size: 1.4rem;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .progress {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .question {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fbfaf6;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: #eef2f9;
+  }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct {
+    background: #e8f5e9;
+    border-color: var(--good);
+    color: var(--good);
+    font-weight: 600;
+  }
+  .option-btn.incorrect {
+    background: #fdecea;
+    border-color: var(--bad);
+    color: var(--bad);
+    font-weight: 600;
+  }
+  .feedback {
+    margin-top: 18px;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  .feedback.correct { background: #e8f5e9; color: var(--good); }
+  .feedback.incorrect { background: #fdecea; color: var(--bad); }
+  .feedback .week-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    background: rgba(0,0,0,0.06);
+    color: var(--text);
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+  .next-row { margin-top: 20px; text-align: right; }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button.primary:hover { opacity: 0.9; }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .results h2 { margin-top: 0; }
+  .score-big {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-align: center;
+    margin: 12px 0;
+  }
+  .results-actions { text-align: center; margin-top: 24px; }
+  .missed-list {
+    margin-top: 16px;
+    padding: 0;
+    list-style: none;
+  }
+  .missed-list li {
+    padding: 8px 10px;
+    border-left: 3px solid var(--bad);
+    background: #fdecea;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BUS 4040 Quiz Simulator</h1>
+  <div class="subtitle">AI for Business Applications - covers Weeks 1 through 3</div>
+  <div class="card" id="app"></div>
+</div>
+
+<script>
+// ---- Question bank, drawn only from Week 1-3 narratives and homework files ----
+const ALL_QUESTIONS = [
+  {
+    type: "mc",
+    question: "What is the name of this course?",
+    options: [
+      "BUS 4040 - AI for Business Applications",
+      "BUS 3030 - Business Analytics",
+      "CS 4040 - Intro to AI",
+      "BUS 4040 - Data Science Fundamentals"
+    ],
+    correct: 0,
+    week: "Week 1",
+    explanation: "The course is BUS 4040, AI for Business Applications - a one credit, sixteen week class."
+  },
+  {
+    type: "tf",
+    question: "True or False: This class will teach you how to program.",
+    correct: 1, // False
+    week: "Week 1",
+    explanation: "The Week 1 narrative says directly: 'You will not learn to program in this class.' AI does the building; you decide what gets built."
+  },
+  {
+    type: "mc",
+    question: "Who teaches this course?",
+    options: ["Ryan Carlyle", "Geoffrey Litt", "Linus Torvalds", "Not stated"],
+    correct: 0,
+    week: "Week 1",
+    explanation: "The instructor introduces himself as Ryan Carlyle - 'Please call me Ryan or Carlyle.'"
+  },
+  {
+    type: "mc",
+    question: "According to the Week 1 grading breakdown, how much of your final grade does 'GitHub Setup' account for?",
+    options: ["5%", "10%", "15%", "20%"],
+    correct: 0,
+    week: "Week 1",
+    explanation: "The syllabus table lists GitHub Setup at 5% - the smallest single component, but still required."
+  },
+  {
+    type: "tf",
+    question: "True or False: Version control helps you tell what changed, undo it, and let someone check it before it reaches a customer.",
+    correct: 0, // True
+    week: "Week 1",
+    explanation: "The Week 1 homework frames version control as the answer to exactly those three questions once AI can generate code very quickly."
+  },
+  {
+    type: "mc",
+    question: "If you already have a GitHub account before this class starts, what should you do?",
+    options: [
+      "Create a brand new second account",
+      "Add your U of I email to your existing account",
+      "Delete it and start over",
+      "Nothing - GitHub setup isn't required"
+    ],
+    correct: 1,
+    week: "Week 1",
+    explanation: "The homework is explicit: 'If you already have a GitHub account, do not create a second one' - just add your U of I email to it."
+  },
+  {
+    type: "tf",
+    question: "True or False: GitHub requires two-factor authentication.",
+    correct: 0, // True
+    week: "Week 1",
+    explanation: "Week 1 homework says to turn on two-factor authentication and notes 'GitHub requires it.'"
+  },
+  {
+    type: "mc",
+    question: "Who created Git, and why?",
+    options: [
+      "Linus Torvalds, after the Linux kernel project lost access to its proprietary tool",
+      "Bill Gates, to compete with GitHub",
+      "A team at GitHub, in 2008",
+      "Mark Zuckerberg, for Meta's internal tools"
+    ],
+    correct: 0,
+    week: "Week 2",
+    explanation: "In 2005, Linus Torvalds created Git for Linux kernel development after the project lost access to its proprietary version control tool."
+  },
+  {
+    type: "tf",
+    question: "True or False: With Git, every developer holds a full copy of the entire project history.",
+    correct: 0, // True
+    week: "Week 2",
+    explanation: "That's what makes Git decentralized - there's no single bottleneck or single point of failure, unlike older centralized systems."
+  },
+  {
+    type: "mc",
+    question: "When creating a new repository on GitHub, why does the course say it's important to turn on 'Add README'?",
+    options: [
+      "It looks nicer on your profile",
+      "It creates the first commit and maps the repo to the main branch",
+      "It's required to make the repo public",
+      "It automatically deletes the repo after grading"
+    ],
+    correct: 1,
+    week: "Week 2",
+    explanation: "Adding a README creates an initial commit, which is what maps the new repo to the main branch - otherwise the repo has no history yet."
+  },
+  {
+    type: "mc",
+    question: "In the 'Git as a multiverse' analogy from class, what does creating a branch (checkout -b) represent?",
+    options: [
+      "Deleting the original reality",
+      "Creating a new timeline - a copy of main - to make changes on",
+      "Merging two timelines together",
+      "Sending your code to the remote server"
+    ],
+    correct: 1,
+    week: "Week 2",
+    explanation: "Checking out a branch creates a new timeline (copy) of main, so your changes stay off main until they're ready."
+  },
+  {
+    type: "tf",
+    question: "True or False: You should generally commit your changes directly to the main branch.",
+    correct: 1, // False
+    week: "Week 2",
+    explanation: "The course material repeatedly says to avoid committing to main and to work in a separate branch instead, mirroring real-world PR workflows."
+  },
+  {
+    type: "mc",
+    question: "In that same analogy, what does 'push' do?",
+    options: [
+      "Copies the repo from GitHub to your computer",
+      "Updates the remote branch on GitHub with your local commits",
+      "Creates a Pull Request",
+      "Stages files to be committed"
+    ],
+    correct: 1,
+    week: "Week 2",
+    explanation: "Push updates the remote branch - it's how your local commits make it back up to GitHub."
+  },
+  {
+    type: "mc",
+    question: "Which authentication method does the course recommend for connecting to GitHub in this class?",
+    options: ["SSH keys only", "HTTPS", "Username and password directly", "FTP"],
+    correct: 1,
+    week: "Week 2",
+    explanation: "The connecting-to-github reference says HTTPS is fine for this class, since it's the easiest option."
+  },
+  {
+    type: "tf",
+    question: "True or False: GitHub accepts your regular username and password when a tool on your computer tries to push code.",
+    correct: 1, // False
+    week: "Week 2",
+    explanation: "GitHub does not accept plain username/password auth from local tools - you connect with HTTPS (token or browser login) or SSH keys instead."
+  },
+  {
+    type: "mc",
+    question: "Anthropic's Claude models come in four tiers. Which one is described as the top-end model for the hardest problems?",
+    options: ["Haiku", "Sonnet", "Opus", "Fable"],
+    correct: 3,
+    week: "Week 3",
+    explanation: "From largest/most capable to smallest: Fable, Opus, Sonnet, Haiku. Fable is the top-end model, priced accordingly."
+  },
+  {
+    type: "tf",
+    question: "True or False: A 'token' is the same thing as one whole word.",
+    correct: 1, // False
+    week: "Week 3",
+    explanation: "A token is roughly three quarters of an English word on average - short common words are one token, longer or unusual words split into several."
+  },
+  {
+    type: "mc",
+    question: "What is a 'harness,' as described in class?",
+    options: [
+      "The AI model itself",
+      "The program you use to interact with an AI model, like the Claude app or Claude Code",
+      "A type of GitHub repository",
+      "A safety feature that blocks bad AI responses"
+    ],
+    correct: 1,
+    week: "Week 3",
+    explanation: "The harness is the music player, the model is the music - example harnesses include the Claude app, Claude Code, Codex, Forge Code, and Ollama."
+  },
+  {
+    type: "mc",
+    question: "What's the real difference between an 'open weight' model (like Llama or Qwen) and a 'closed' model (like Claude or GPT)?",
+    options: [
+      "Open weight models can be downloaded and run on your own hardware; closed models run on the vendor's servers",
+      "Closed models are always free",
+      "Open weight models can't be used for business",
+      "There is no real difference"
+    ],
+    correct: 0,
+    week: "Week 3",
+    explanation: "Closed models run on the vendor's servers and you rent access; open weight models can be downloaded and run on your own hardware - a tradeoff of control/privacy vs. convenience and top-end quality."
+  },
+  {
+    type: "tf",
+    question: "True or False: The 'context window' refers to how many tokens a model can consider at once.",
+    correct: 0, // True
+    week: "Week 3",
+    explanation: "Every model has a limit on how many tokens it can consider at once - that limit is the context window. Long chats or long documents can burn through it fast."
+  }
+];
+
+// ---- Quiz engine ----
+const app = document.getElementById("app");
+let activeIndices = [];
+let currentPos = 0;
+let score = 0;
+let missedIndices = [];
+let totalThisRound = 0;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuiz(indices) {
+  activeIndices = shuffle(indices);
+  totalThisRound = activeIndices.length;
+  currentPos = 0;
+  score = 0;
+  missedIndices = [];
+  renderQuestion();
+}
+
+function getOptions(q) {
+  if (q.type === "tf") return ["True", "False"];
+  return q.options;
+}
+
+function renderQuestion() {
+  const qIndex = activeIndices[currentPos];
+  const q = ALL_QUESTIONS[qIndex];
+  const options = getOptions(q);
+
+  const optionsHtml = options.map((opt, i) =>
+    `<button class="option-btn" data-idx="${i}">${opt}</button>`
+  ).join("");
+
+  app.innerHTML = `
+    <div class="progress">Question ${currentPos + 1} of ${totalThisRound} &middot; Score so far: ${score}</div>
+    <div class="question">${q.question}</div>
+    <div class="options">${optionsHtml}</div>
+    <div id="feedbackArea"></div>
+  `;
+
+  const buttons = app.querySelectorAll(".option-btn");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => handleAnswer(qIndex, parseInt(btn.dataset.idx, 10), buttons));
+  });
+}
+
+function handleAnswer(qIndex, chosenIdx, buttons) {
+  const q = ALL_QUESTIONS[qIndex];
+  const isCorrect = chosenIdx === q.correct;
+
+  buttons.forEach(b => (b.disabled = true));
+  buttons[q.correct].classList.add("correct");
+  if (!isCorrect) buttons[chosenIdx].classList.add("incorrect");
+
+  if (isCorrect) {
+    score++;
+  } else {
+    missedIndices.push(qIndex);
+  }
+
+  const feedbackArea = document.getElementById("feedbackArea");
+  feedbackArea.innerHTML = `
+    <div class="feedback ${isCorrect ? "correct" : "incorrect"}">
+      <strong>${isCorrect ? "Correct!" : "Not quite."}</strong> ${q.explanation}
+      <div class="week-tag">From ${q.week}</div>
+    </div>
+    <div class="next-row">
+      <button class="primary" id="nextBtn">${currentPos + 1 < totalThisRound ? "Next question" : "See results"}</button>
+    </div>
+  `;
+
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    currentPos++;
+    if (currentPos < totalThisRound) {
+      renderQuestion();
+    } else {
+      renderResults();
+    }
+  });
+}
+
+function renderResults() {
+  const missedCount = missedIndices.length;
+  const missedListHtml = missedIndices.map(i =>
+    `<li>${ALL_QUESTIONS[i].question} <em>(${ALL_QUESTIONS[i].week})</em></li>`
+  ).join("");
+
+  app.innerHTML = `
+    <div class="results">
+      <h2>Results</h2>
+      <div class="score-big">${score} / ${totalThisRound}</div>
+      ${missedCount > 0
+        ? `<p>Here's what to review:</p><ul class="missed-list">${missedListHtml}</ul>`
+        : "<p>Perfect round - nice work!</p>"}
+      <div class="results-actions">
+        ${missedCount > 0 ? `<button class="primary" id="retryMissedBtn">Retry just the missed ones</button>` : ""}
+        <button class="secondary" id="restartBtn">Start over (all 20)</button>
+      </div>
+    </div>
+  `;
+
+  if (missedCount > 0) {
+    document.getElementById("retryMissedBtn").addEventListener("click", () => {
+      startQuiz(missedIndices.slice());
+    });
+  }
+  document.getElementById("restartBtn").addEventListener("click", () => {
+    startQuiz(ALL_QUESTIONS.map((_, i) => i));
+  });
+}
+
+// Kick off the first round
+startQuiz(ALL_QUESTIONS.map((_, i) => i));
+</script>
+</body>
+</html>
